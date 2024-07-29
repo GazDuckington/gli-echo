@@ -82,10 +82,8 @@ func GetBreedImages(c echo.Context) error {
 	var filteredImages []string
 	if strings.ToLower(breed) == "shiba" {
 		for _, img := range breedImgResponse.Message {
-			if strings.ToLower(breed) == "shiba" {
-				if isOddNumberInFilename(img) {
-					filteredImages = append(filteredImages, img)
-				}
+			if isOddNumberInFilename(img) {
+				filteredImages = append(filteredImages, img)
 			}
 		}
 	} else {
