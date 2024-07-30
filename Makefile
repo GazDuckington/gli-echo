@@ -1,5 +1,5 @@
 PACKAGE_PATH = ./...
-OUTPUT_PATH = cmd/
+OUTPUT_PATH = tmp/
 
 .PHONY: build
 build:

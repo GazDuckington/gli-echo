@@ -6,6 +6,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -16,8 +17,10 @@ func main() {
 	}
 	log.Println("Environment loaded")
 
+	e.Use(middleware.Logger())
+
 	api.GetAllBreedsEndpoint(e)
 	api.GetBreedImages(e)
 
-	e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(e.Start(":8000"))
 }
