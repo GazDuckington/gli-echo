@@ -1,0 +1,72 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "API Docs",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8000",
+    "paths": {
+        "/breeds/": {
+            "get": {
+                "description": "Get all breeds",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "breeds"
+                ],
+                "summary": "Get dog breeds",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/breeds/{breed}/images": {
+            "get": {
+                "description": "Get images of a specific breed",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "breed-images"
+                ],
+                "summary": "Get dog images",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Breed",
+                        "name": "breed",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

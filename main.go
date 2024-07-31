@@ -6,11 +6,17 @@ import (
 	"alfa/data"
 	"log"
 
+	_ "alfa/docs"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/swaggo/echo-swagger"
 )
 
+// @title API Docs
+// @version 1.0
+
+// @host localhost:8000
 func main() {
 	e := echo.New()
 	err := godotenv.Load()
@@ -28,6 +34,8 @@ func main() {
 	data.Initialize()
 
 	e.Use(middleware.Logger())
+
+	e.GET("/swagger-ui/*", echoSwagger.WrapHandler)
 
 	api.GetAllBreedsEndpoint(e)
 	api.GetBreedImages(e)

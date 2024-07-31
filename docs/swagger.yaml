@@ -1,0 +1,47 @@
+host: localhost:8000
+info:
+  contact: {}
+  title: API Docs
+  version: "1.0"
+paths:
+  /breeds/:
+    get:
+      consumes:
+      - application/json
+      description: Get all breeds
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Get dog breeds
+      tags:
+      - breeds
+  /breeds/{breed}/images:
+    get:
+      consumes:
+      - application/json
+      description: Get images of a specific breed
+      parameters:
+      - description: Breed
+        in: path
+        name: breed
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Get dog images
+      tags:
+      - breed-images
+swagger: "2.0"
