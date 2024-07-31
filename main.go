@@ -2,6 +2,7 @@ package main
 
 import (
 	"alfa/api"
+	"alfa/data"
 	"log"
 
 	"github.com/joho/godotenv"
@@ -16,6 +17,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	log.Println("Environment loaded")
+	data.Initialize()
 
 	e.Use(middleware.Logger())
 

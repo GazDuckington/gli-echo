@@ -25,7 +25,6 @@ type GenericResponse struct {
 	Status  string   `json:"status"`
 }
 
-// request initializer
 func NewRequests(config RequestsConfig) *Requests {
 	return &Requests{
 		Client: &http.Client{
