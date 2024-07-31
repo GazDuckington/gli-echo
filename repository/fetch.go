@@ -1,23 +1,98 @@
 package repository
 
 import (
+	"alfa/cache"
 	"alfa/utils"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 )
 
 type dogs struct{}
 type resultChan struct {
 	images []string
+}
+
+func CacheResponse(key string, response utils.Response) error {
+	rdb := cache.GetRedisClient()
+	ctx := cache.GetRedisCtx()
+
+	data, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
+
+	err = rdb.Set(ctx, key, data, 30*time.Second).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func CacheGenericResponse(key string, response utils.GenericResponse) error {
+	rdb := cache.GetRedisClient()
+	ctx := cache.GetRedisCtx()
+
+	data, err := json.Marshal(response)
+	if err != nil {
+		return err
+	}
+
+	err = rdb.Set(ctx, key, data, 30*time.Second).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetCachedResponse(key string) (*utils.Response, error) {
+	rdb := cache.GetRedisClient()
+	ctx := cache.GetRedisCtx()
+
+	cdata, err := rdb.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var response utils.Response
+	if err := json.Unmarshal([]byte(cdata), &response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+func GetCachedImage(key string) (*utils.GenericResponse, error) {
+	rdb := cache.GetRedisClient()
+	ctx := cache.GetRedisCtx()
+
+	cdata, err := rdb.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var response utils.GenericResponse
+	if err := json.Unmarshal([]byte(cdata), &response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
 }
 
 func GetAllBreeds(c echo.Context) error {
@@ -28,6 +103,16 @@ func GetAllBreeds(c echo.Context) error {
 	ListAllBreedsConfig := utils.RequestsConfig{
 		URL:     url + "/breeds/list/all",
 		Timeout: 5 * time.Second,
+	}
+
+	cdata, err := GetCachedResponse("allBreeds")
+	if err != nil {
+		log.Printf("Error getting allBreeds: %v", err)
+	}
+
+	if cdata != nil {
+		log.Print("Using cached data")
+		return c.JSON(http.StatusOK, cdata)
 	}
 
 	breedTypesDB := GetBreedTypes()
@@ -43,13 +128,14 @@ func GetAllBreeds(c echo.Context) error {
 		res, err := listAllBreedRequest.Get()
 		if err != nil {
 			log.Panicf("GET request failed: %v", err)
-			return c.JSON(http.StatusInternalServerError, err.Error())
+			// return c.JSON(http.StatusInternalServerError, err.Error())
+			return c.JSON(http.StatusOK, []string{})
 		}
 
 		if err := json.Unmarshal(res, &breedsResponse); err != nil {
-			return c.JSON(http.StatusInternalServerError, "Failed to unmarshal JSON data")
+			// return c.JSON(http.StatusInternalServerError, "Failed to unmarshal JSON data")
+			return c.JSON(http.StatusOK, []string{})
 		}
-		log.Print("GAZ: ", reflect.TypeOf(breedsResponse.Message))
 		err_pop := PopulateDog(breedsResponse.Message)
 		if err_pop != nil {
 			log.Printf("Error populating dog table: %v", err_pop)
@@ -88,6 +174,10 @@ func GetAllBreeds(c echo.Context) error {
 	modifiedResponse := utils.Response{
 		Message: breedTypes,
 		Status:  breedsResponse.Status,
+	}
+	errc := CacheResponse("allBreeds", modifiedResponse)
+	if errc != nil {
+		log.Printf("Error caching dog_all: %v", errc)
 	}
 	return c.JSON(http.StatusOK, modifiedResponse)
 }
@@ -134,6 +224,17 @@ func GetBreedImages(c echo.Context) error {
 	var breedImgResponse utils.GenericResponse
 	var filteredImages []string
 	var url = os.Getenv("URL")
+	key := "images" + breed
+
+	cdata, err := GetCachedImage(key)
+	if err != nil {
+		log.Printf("Error getting cached images: %v", err)
+	}
+
+	if cdata != nil {
+		log.Print("Using cached images")
+		return c.JSON(http.StatusOK, cdata)
+	}
 
 	breedImagesConfig := utils.RequestsConfig{
 		URL:     url + "/breed/" + breed + "/images",
@@ -150,14 +251,16 @@ func GetBreedImages(c echo.Context) error {
 		breedImagesRequest := utils.NewRequests(breedImagesConfig)
 		res, err := breedImagesRequest.Get()
 		if err != nil {
-			log.Panicf("GET request failed: %v", err)
-			return c.JSON(http.StatusInternalServerError, err.Error())
+			log.Printf("GET request failed: %v", err)
+			// return c.JSON(http.StatusInternalServerError, err.Error())
+			return c.JSON(http.StatusOK, []string{})
 		}
 
 		if err := json.Unmarshal(res, &breedImgResponse); err != nil {
-			log.Panicf("Error %v", err)
-			return c.JSON(http.StatusInternalServerError, "Failed to unmarshal JSON data")
+			log.Printf("Error %v", err)
+			return c.JSON(http.StatusOK, []string{})
 		}
+
 	}
 
 	if strings.ToLower(breed) == "shiba" {
@@ -170,11 +273,17 @@ func GetBreedImages(c echo.Context) error {
 		filteredImages = breedImgResponse.Message
 	}
 
-	breedImgResponse.Message = filteredImages
+	if images == nil {
+		pop_img := PopulateDogImage(filteredImages, breed)
+		if pop_img != nil {
+			log.Printf("Breed %s Images inserted", breed)
+		}
+	}
 
-	pop_img := PopulateDogImage(filteredImages, breed)
-	if pop_img != nil {
-		log.Printf("Breed %s Images inserted", breed)
+	breedImgResponse.Message = filteredImages
+	errc := CacheGenericResponse(key, breedImgResponse)
+	if errc != nil {
+		log.Printf("Error caching images: %v", errc)
 	}
 	return c.JSON(http.StatusOK, breedImgResponse)
 }

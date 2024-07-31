@@ -2,6 +2,7 @@ package main
 
 import (
 	"alfa/api"
+	"alfa/cache"
 	"alfa/data"
 	"log"
 
@@ -17,6 +18,13 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	log.Println("Environment loaded")
+
+	err_r := cache.Initialize()
+	if err_r != nil {
+		log.Fatalf("Error init redis cache: %v", err_r)
+	}
+	log.Println("Redis cache loaded")
+
 	data.Initialize()
 
 	e.Use(middleware.Logger())
